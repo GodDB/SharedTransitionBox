@@ -104,13 +104,13 @@ fun SpeculationWithMovableContentDemo() {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .sharedElement(3000)
+                            .sharedElement(1000)
                     ) {
                         AnimatedVisibility(
                             modifier = Modifier.fillMaxSize(),
                             visible = viewState != ViewState.PANNING,
-                            enter = fadeIn(tween(3000)),
-                            exit = fadeOut(tween(3000))
+                            enter = fadeIn(tween(1000)),
+                            exit = fadeOut(tween(1000))
                         ) {
                             Spacer(
                                 modifier = Modifier
