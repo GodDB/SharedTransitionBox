@@ -84,7 +84,7 @@ fun SharedElementTransitionBox(
         },
         measurePolicy = { measurable, constraints ->
             val placeables = measurable.map { it.measure(constraints) }
-            val width: Int = placeables.maxOf { it.width }
+            val width = placeables.maxOf { it.width }
             val height = placeables.maxOf { it.height }
             layout(width, height) {
                 placeables.forEach {
@@ -207,7 +207,7 @@ class SharedElementTransitionBoxScope internal constructor(
             }
 
             LaunchedEffect(key1 = targetSize, key2 = targetOffset) {
-                if(targetSize != null && targetOffset != null) {
+                if (targetSize != null && targetOffset != null) {
                     launch {
                         val startTime = System.currentTimeMillis()
                         while (System.currentTimeMillis() < startTime + animationDurationState.value) {
@@ -239,6 +239,7 @@ class SharedElementTransitionBoxScope internal constructor(
                 }
                 .intermediateLayout { measurable, constraints, lookaheadSize ->
                     targetSize = lookaheadSize
+                    Log.e("godgod", "$targetSize")
                     val (width, height) = sizeAnimatorMap[id]?.value ?: lookaheadSize
                     val animateConstraints = constraints.copy(
                         minWidth = width,
