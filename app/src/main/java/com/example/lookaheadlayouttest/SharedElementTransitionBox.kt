@@ -2,6 +2,7 @@
 
 package com.example.lookaheadlayouttest
 
+import android.util.Log
 import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector2D
@@ -29,6 +30,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.round
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -106,6 +109,7 @@ class SharedElementTransitionBoxScope internal constructor(
     fun Modifier.sharedElement(
         animationDuration: Int = 500,
         onAnimateStart: () -> Unit = {},
+        onAnimating: (Float) -> Unit = {},
         onAnimateFinish: () -> Unit = {},
         onAnimateCancel: () -> Unit = {}
     ): Modifier =
@@ -120,6 +124,7 @@ class SharedElementTransitionBoxScope internal constructor(
                 }
             }
             val onAnimateStartState = rememberUpdatedState(newValue = onAnimateStart)
+            val onAnimatingState = rememberUpdatedState(newValue = onAnimating)
             val onAnimateFinishState = rememberUpdatedState(newValue = onAnimateFinish)
             val onAnimateCancelState = rememberUpdatedState(newValue = onAnimateCancel)
             val animationDurationState = rememberUpdatedState(newValue = animationDuration)
@@ -143,7 +148,7 @@ class SharedElementTransitionBoxScope internal constructor(
                 launch {
                     snapshotFlow { targetOffset }
                         .filterNotNull()
-                        .collect {
+                        .collectLatest {
                             launch {
                                 val notnullOffsetAnimator = offsetAnimatorMap[id] ?: run {
                                     offsetAnimatorMap[id] = Animatable(
@@ -159,9 +164,12 @@ class SharedElementTransitionBoxScope internal constructor(
                                         targetValue = it,
                                         animationSpec = tween(animationDurationState.value)
                                     )
+
+
                                     if (sizeAnimatorMap[id]?.isRunning == false) onAnimateFinishState.value.invoke()
                                 } catch (cancellation: CancellationException) {
                                     if (sizeAnimatorMap[id]?.isRunning == false) onAnimateCancelState.value.invoke()
+
                                     throw cancellation
                                 }
                             }
@@ -171,7 +179,7 @@ class SharedElementTransitionBoxScope internal constructor(
                 launch {
                     snapshotFlow { targetSize }
                         .filterNotNull()
-                        .collect {
+                        .collectLatest {
                             launch {
                                 val notnullSizeAnimator = sizeAnimatorMap[id] ?: kotlin.run {
                                     sizeAnimatorMap[id] = Animatable(
@@ -190,10 +198,28 @@ class SharedElementTransitionBoxScope internal constructor(
                                     if (offsetAnimatorMap[id]?.isRunning == false) onAnimateFinishState.value.invoke()
                                 } catch (cancellation: CancellationException) {
                                     if (offsetAnimatorMap[id]?.isRunning == false) onAnimateCancelState.value.invoke()
+
                                     throw cancellation
                                 }
                             }
                         }
+                }
+            }
+
+            LaunchedEffect(key1 = targetSize, key2 = targetOffset) {
+                if(targetSize != null && targetOffset != null) {
+                    launch {
+                        val startTime = System.currentTimeMillis()
+                        while (System.currentTimeMillis() < startTime + animationDurationState.value) {
+                            ensureActive()
+                            if (sizeAnimatorMap[id]?.isRunning == true || offsetAnimatorMap[id]?.isRunning == true) {
+                                onAnimatingState.value.invoke(
+                                    (System.currentTimeMillis() - startTime) / animationDurationState.value.toFloat()
+                                )
+                            }
+                            delay(1000L / 60L) // 60fps
+                        }
+                    }
                 }
             }
 
